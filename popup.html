@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ReadWithMe - Accessible Reader</title>
+<style>
+  :root {
+    --rwm-bg: #FBFAF7;
+    --rwm-surface: #FFFFFF;
+    --rwm-border: #E3DFD6;
+    --rwm-text: #2E2A24;
+    --rwm-text-soft: #6B6558;
+    --rwm-accent: #5B7F8C;
+    --rwm-accent-soft: #E7F0F2;
+    --rwm-focus: #B98900;
+    --rwm-radius: 10px;
+    --rwm-switch-off: #D8D2C4;
+    --rwm-hover: #F1EEE6;
+    color-scheme: light;
+  }
+
+  /* Dark theme: soft off-black surfaces, light text, muted borders. */
+  :root[data-theme="dark"] {
+    --rwm-bg: #121212;
+    --rwm-surface: #1E1E1E;
+    --rwm-border: #333333;
+    --rwm-text: #E0E0E0;
+    --rwm-text-soft: #A8A8A8;
+    --rwm-accent: #7FB0C0;
+    --rwm-accent-soft: #263238;
+    --rwm-focus: #E0B33A;
+    --rwm-switch-off: #4A4A4A;
+    --rwm-hover: #2A2A2A;
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    width: 340px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: var(--rwm-bg);
+    color: var(--rwm-text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header {
+    padding: 16px 18px 12px 18px;
+    border-bottom: 1px solid var(--rwm-border);
+    background: var(--rwm-surface);
+  }
+
+  header h1 {
+    font-size: 16px;
+    margin: 0 0 2px 0;
+    font-weight: 700;
+    color: var(--rwm-text);
+  }
+
+  header p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--rwm-text-soft);
+    line-height: 1.4;
+  }
+
+  main {
+    padding: 14px 18px 18px 18px;
+  }
+
+  h2.rwm-heading {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--rwm-text-soft);
+    margin: 0 0 8px 0;
+    font-weight: 700;
+  }
+
+  .rwm-section {
+    margin-bottom: 18px;
+  }
+
+  .rwm-section:last-of-type {
+    margin-bottom: 8px;
+  }
+
+  .rwm-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  label.rwm-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rwm-text);
+  }
+
+  .rwm-value-pill {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--rwm-accent);
+    background: var(--rwm-accent-soft);
+    padding: 2px 8px;
+    border-radius: 999px;
+    min-width: 34px;
+    text-align: center;
+  }
+
+  select {
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: var(--rwm-radius);
+    border: 1px solid var(--rwm-border);
+    background: var(--rwm-surface);
+    color: var(--rwm-text);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  select:focus-visible,
+  input:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--rwm-focus);
+    outline-offset: 2px;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--rwm-border);
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--rwm-accent);
+    border: 2px solid var(--rwm-surface);
+    box-shadow: 0 0 0 1px var(--rwm-border);
+    cursor: pointer;
+    margin-top: -6px;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--rwm-accent);
+    border: 2px solid var(--rwm-surface);
+    box-shadow: 0 0 0 1px var(--rwm-border);
+    cursor: pointer;
+  }
+
+  .rwm-swatch-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .rwm-swatch {
+    flex: 1;
+    height: 40px;
+    border-radius: var(--rwm-radius);
+    border: 2px solid var(--rwm-border);
+    cursor: pointer;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 4px;
+    font-size: 9px;
+    font-weight: 600;
+    color: #4A4538;
+    transition: border-color 0.15s ease, transform 0.1s ease;
+  }
+
+  .rwm-swatch:hover {
+    transform: translateY(-1px);
+  }
+
+  .rwm-swatch[aria-pressed="true"] {
+    border-color: var(--rwm-accent);
+    box-shadow: 0 0 0 2px var(--rwm-accent-soft);
+  }
+
+  .rwm-swatch-cream { background: #F7F4EB; }
+  .rwm-swatch-blue { background: #EBF3F7; }
+  .rwm-swatch-yellow { background: #FDF8E1; }
+  .rwm-swatch-clear {
+    background: repeating-conic-gradient(#EDEAE2 0% 25%, #FFFFFF 0% 50%) 0 0 / 10px 10px;
+  }
+
+  .rwm-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--rwm-surface);
+    border: 1px solid var(--rwm-border);
+    border-radius: var(--rwm-radius);
+    margin-bottom: 8px;
+  }
+
+  .rwm-toggle-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .rwm-toggle-text {
+    display: flex;
+    flex-direction: column;
+    padding-right: 10px;
+  }
+
+  .rwm-toggle-text .rwm-title {
+    font-size: 13px;
+  }
+
+  .rwm-toggle-text .rwm-subtitle {
+    font-size: 11px;
+    color: var(--rwm-text-soft);
+    margin-top: 1px;
+  }
+
+  .rwm-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+
+  .rwm-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .rwm-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: var(--rwm-switch-off);
+    transition: 0.2s;
+    border-radius: 999px;
+  }
+
+  .rwm-slider::before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    top: 3px;
+    background-color: #FFFFFF;
+    transition: 0.2s;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  }
+
+  .rwm-switch input:checked + .rwm-slider {
+    background-color: var(--rwm-accent);
+  }
+
+  .rwm-switch input:checked + .rwm-slider::before {
+    transform: translateX(18px);
+  }
+
+  .rwm-switch input:focus-visible + .rwm-slider {
+    outline: 2px solid var(--rwm-focus);
+    outline-offset: 2px;
+  }
+
+  button#resetBtn {
+    width: 100%;
+    padding: 10px;
+    border-radius: var(--rwm-radius);
+    border: 1px solid var(--rwm-border);
+    background: var(--rwm-surface);
+    color: var(--rwm-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  button#resetBtn:hover {
+    background: var(--rwm-hover);
+  }
+
+  .rwm-secondary-btn,
+  .rwm-danger-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: var(--rwm-radius);
+    border: 1px solid var(--rwm-border);
+    background: var(--rwm-surface);
+    color: var(--rwm-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .rwm-secondary-btn:hover {
+    background: var(--rwm-hover);
+  }
+
+  .rwm-danger-btn {
+    background: #B3261E;
+    border-color: #B3261E;
+    color: #FFFFFF;
+  }
+
+  .rwm-danger-btn:hover {
+    background: #8C1D18;
+  }
+
+  .rwm-confirm {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: var(--rwm-surface);
+    border: 1px solid var(--rwm-border);
+    border-radius: var(--rwm-radius);
+  }
+
+  .rwm-confirm[hidden] {
+    display: none;
+  }
+
+  .rwm-confirm p {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--rwm-text);
+  }
+
+  .rwm-confirm-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .rwm-status {
+    margin: 8px 0 0 0;
+    font-size: 11px;
+    color: var(--rwm-text-soft);
+    min-height: 14px;
+  }
+
+  .rwm-footer-note {
+    text-align: center;
+    font-size: 10px;
+    color: var(--rwm-text-soft);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ReadWithMe</h1>
+  <p>Gentle, on-page reading support &mdash; adjust typography, tint, and reading tools for this tab.</p>
+</header>
+
+<main>
+
+  <section class="rwm-section" aria-labelledby="fontLabel">
+    <div class="rwm-label-row">
+      <label class="rwm-title" id="fontLabel" for="fontSelect">Font family</label>
+    </div>
+    <select id="fontSelect" name="fontSelect" aria-describedby="fontLabel">
+      <option value="lexend">Lexend</option>
+      <option value="opendyslexic">OpenDyslexic</option>
+      <option value="arial">Arial</option>
+    </select>
+  </section>
+
+  <section class="rwm-section" aria-labelledby="fontSizeLabel">
+    <div class="rwm-label-row">
+      <label class="rwm-title" id="fontSizeLabel" for="fontSizeRange">Font size</label>
+      <span class="rwm-value-pill" id="fontSizeValue">18px</span>
+    </div>
+    <input type="range" id="fontSizeRange" min="14" max="28" step="1" value="18"
+      aria-labelledby="fontSizeLabel" aria-valuetext="18 pixels" />
+  </section>
+
+  <section class="rwm-section" aria-labelledby="lineHeightLabel">
+    <div class="rwm-label-row">
+      <label class="rwm-title" id="lineHeightLabel" for="lineHeightRange">Line spacing</label>
+      <span class="rwm-value-pill" id="lineHeightValue">1.6</span>
+    </div>
+    <input type="range" id="lineHeightRange" min="1.2" max="2.5" step="0.1" value="1.6"
+      aria-labelledby="lineHeightLabel" aria-valuetext="1.6" />
+  </section>
+
+  <section class="rwm-section" aria-labelledby="letterSpacingLabel">
+    <div class="rwm-label-row">
+      <label class="rwm-title" id="letterSpacingLabel" for="letterSpacingRange">Letter spacing</label>
+      <span class="rwm-value-pill" id="letterSpacingValue">0.05em</span>
+    </div>
+    <input type="range" id="letterSpacingRange" min="0.05" max="0.25" step="0.01" value="0.05"
+      aria-labelledby="letterSpacingLabel" aria-valuetext="0.05 em" />
+  </section>
+
+  <section class="rwm-section" aria-labelledby="tintLabel">
+    <div class="rwm-label-row">
+      <label class="rwm-title" id="tintLabel">Background tint</label>
+    </div>
+    <div class="rwm-swatch-row" role="group" aria-labelledby="tintLabel">
+      <button type="button" class="rwm-swatch rwm-swatch-cream" data-tint="#F7F4EB" aria-pressed="false" title="Off-White Cream">Cream</button>
+      <button type="button" class="rwm-swatch rwm-swatch-blue" data-tint="#EBF3F7" aria-pressed="false" title="Soft Blue">Blue</button>
+      <button type="button" class="rwm-swatch rwm-swatch-yellow" data-tint="#FDF8E1" aria-pressed="false" title="Pastel Yellow">Yellow</button>
+      <button type="button" class="rwm-swatch rwm-swatch-clear" data-tint="none" aria-pressed="true" title="None / Default">None</button>
+    </div>
+  </section>
+
+  <section class="rwm-section" aria-label="Appearance">
+    <h2 class="rwm-heading">Appearance</h2>
+
+    <div class="rwm-toggle-row">
+      <span class="rwm-toggle-text">
+        <span class="rwm-title">Dark Mode</span>
+        <span class="rwm-subtitle">Switches webpages, this menu, and the on-page ReadWithMe buttons between light and dark</span>
+      </span>
+      <label class="rwm-switch">
+        <input type="checkbox" id="themeToggle" />
+        <span class="rwm-slider"></span>
+        <span class="visually-hidden">Toggle Dark Mode</span>
+      </label>
+    </div>
+
+    <div class="rwm-toggle-row">
+      <span class="rwm-toggle-text">
+        <span class="rwm-title">Apply theme to webpages</span>
+        <span class="rwm-subtitle">Turn off to theme only this menu and the on-page buttons</span>
+      </span>
+      <label class="rwm-switch">
+        <input type="checkbox" id="themePagesToggle" />
+        <span class="rwm-slider"></span>
+        <span class="visually-hidden">Apply theme to webpages</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="rwm-section" aria-label="Reading tools">
+    <h2 class="rwm-heading">Reading tools</h2>
+
+    <div class="rwm-toggle-row">
+      <span class="rwm-toggle-text">
+        <span class="rwm-title">Focus Window</span>
+        <span class="rwm-subtitle">Dims the page above and below a 2-line window that follows your cursor</span>
+      </span>
+      <label class="rwm-switch">
+        <input type="checkbox" id="focusWindowToggle" />
+        <span class="rwm-slider"></span>
+        <span class="visually-hidden">Toggle Focus Window</span>
+      </label>
+    </div>
+
+    <div class="rwm-toggle-row">
+      <span class="rwm-toggle-text">
+        <span class="rwm-title">Calm Mode</span>
+        <span class="rwm-subtitle">Hides ads, cookie notices, popups, and sticky bars without changing the page layout</span>
+      </span>
+      <label class="rwm-switch">
+        <input type="checkbox" id="calmModeToggle" />
+        <span class="rwm-slider"></span>
+        <span class="visually-hidden">Toggle Calm Mode</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="rwm-section" aria-label="Read Aloud">
+    <h2 class="rwm-heading">Read Aloud</h2>
+
+    <div class="rwm-toggle-row">
+      <span class="rwm-toggle-text">
+        <span class="rwm-title">Read Aloud on Hover</span>
+        <span class="rwm-subtitle">Pause your cursor over text to hear it read aloud</span>
+      </span>
+      <label class="rwm-switch">
+        <input type="checkbox" id="readAloudToggle" />
+        <span class="rwm-slider"></span>
+        <span class="visually-hidden">Toggle Read Aloud on Hover</span>
+      </label>
+    </div>
+
+    <div class="rwm-label-row" style="margin-top: 8px;">
+      <label class="rwm-title" id="voiceLabel" for="voiceSelect">Voice</label>
+    </div>
+    <select id="voiceSelect" name="voiceSelect" aria-describedby="voiceLabel">
+      <option value="">System Default</option>
+    </select>
+
+    <div class="rwm-label-row" style="margin-top: 12px;">
+      <label class="rwm-title" id="speedLabel" for="speedRange">Speed</label>
+      <span class="rwm-value-pill" id="speedValue">1.0x</span>
+    </div>
+    <input type="range" id="speedRange" min="0.75" max="2.0" step="0.1" value="1.0"
+      aria-labelledby="speedLabel" aria-valuetext="1.0x" />
+  </section>
+
+  <section class="rwm-section" aria-label="Tabs">
+    <h2 class="rwm-heading">Tabs</h2>
+    <button type="button" id="closeTabsBtn" class="rwm-secondary-btn">Close all other tabs</button>
+    <div id="closeTabsConfirm" class="rwm-confirm" hidden>
+      <p id="closeTabsMessage"></p>
+      <div class="rwm-confirm-actions">
+        <button type="button" id="closeTabsYes" class="rwm-danger-btn">Close tabs</button>
+        <button type="button" id="closeTabsNo" class="rwm-secondary-btn">Cancel</button>
+      </div>
+    </div>
+    <p id="tabsStatus" class="rwm-status" role="status" aria-live="polite"></p>
+  </section>
+
+  <button type="button" id="resetBtn">Reset to defaults</button>
+
+  <p class="rwm-footer-note">
+    Settings sync across your tabs automatically.<br />
+    Double-click or highlight any word on a page for syllables &amp; a quick definition.<br />
+    Look for the chat badge in the bottom-right corner for the AI reading copilot.<br />
+    The &#128065;&#65039;, &#129496;, &#127769; and &#128266; buttons beside it switch Focus Window, Calm Mode, Dark Mode and Read Aloud without opening this menu.
+  </p>
+
+</main>
+
+<script src="popup.js"></script>
+</body>
+</html>

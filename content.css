@@ -1,0 +1,641 @@
+/* ReadWithMe - content.css
+   Static styles injected into every page: web font declarations, the
+   Focus Window overlay, Calm Mode hiding rules, the AI Copilot badge/
+   drawer, the quick toggle toolbar, the syllable/jargon tooltip, and
+   the Read-Aloud highlight.
+   Per-page typography (size/spacing/family/tint/text color) is generated
+   dynamically by content.js into a separate <style id="rwm-typography">
+   tag so it can update live without reloading this sheet.
+
+   THEMING: every element the extension injects carries the .rwm-ui class.
+   Its colors come from the --rwm-ui-* variables below. content.js sets
+   data-rwm-theme="light" | "dark" on <html>, and the dark block overrides
+   the variables, so all extension widgets switch themes together. */
+
+/* --- Web fonts ------------------------------------------------------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap');
+
+/* OpenDyslexic served from a public CDN. If your network blocks third-party
+   CDNs, download the .woff2 files, place them in a local /fonts folder, and
+   point these src urls at chrome-extension://__MSG_@@extension_id__/fonts/...
+   (the manifest's web_accessible_resources entry already allows this). */
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic-regular.woff2') format('woff2'),
+       url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic-regular.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic-bold.woff2') format('woff2'),
+       url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic-bold.woff') format('woff');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- Extension UI theme variables (Light default, Dark override) ------ */
+
+.rwm-ui {
+  --rwm-ui-bg: #FBFAF7;
+  --rwm-ui-surface: #FFFFFF;
+  --rwm-ui-border: #E3DFD6;
+  --rwm-ui-text: #2E2A24;
+  --rwm-ui-text-soft: #6B6558;
+  --rwm-ui-accent: #5B7F8C;
+  --rwm-ui-accent-dark: #3F5F6B;
+  --rwm-ui-hover: #E7F0F2;
+  --rwm-ui-bubble: #F1EEE6;
+  --rwm-ui-tooltip-bg: #2E2A24;
+  --rwm-ui-tooltip-border: transparent;
+  --rwm-ui-shadow: rgba(0, 0, 0, 0.25);
+}
+
+html[data-rwm-theme="dark"] .rwm-ui {
+  --rwm-ui-bg: #121212;
+  --rwm-ui-surface: #1E1E1E;
+  --rwm-ui-border: #333333;
+  --rwm-ui-text: #E0E0E0;
+  --rwm-ui-text-soft: #A8A8A8;
+  --rwm-ui-accent: #4A6B77;
+  --rwm-ui-accent-dark: #7FB0C0;
+  --rwm-ui-hover: #2A2A2A;
+  --rwm-ui-bubble: #2A2A2A;
+  --rwm-ui-tooltip-bg: #1E1E1E;
+  --rwm-ui-tooltip-border: #333333;
+  --rwm-ui-shadow: rgba(0, 0, 0, 0.6);
+}
+
+/* --- FEATURE 3: Focus Window ----------------------------------------------
+   #rwm-focus-overlay is a single fixed, full-viewport, pointer-events-none
+   container. content.js resizes its two children (.rwm-focus-panel-top and
+   .rwm-focus-panel-bottom) on every mousemove event, leaving a clear ~2-line
+   illuminated band around the cursor between them. */
+
+#rwm-focus-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+  z-index: 2147483647 !important;
+  --rwm-feather: 28px;
+  display: none !important;
+}
+
+#rwm-focus-overlay.rwm-active {
+  display: block !important;
+}
+
+/* Soft, feathered edges: each panel is a flat dim layer (plus a very light
+   backdrop blur) whose edge facing the clear band is faded out with a
+   mask-image gradient. --rwm-feather controls how wide that fade is. The
+   mask fades the dim AND the blur together, so the lit reading band blends
+   smoothly into the darkened page with no hard line. */
+#rwm-focus-overlay .rwm-focus-panel-top,
+#rwm-focus-overlay .rwm-focus-panel-bottom {
+  position: absolute !important;
+  left: 0 !important;
+  width: 100vw !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  -webkit-backdrop-filter: blur(1.5px) !important;
+  backdrop-filter: blur(1.5px) !important;
+  pointer-events: none !important;
+  transition: none !important;
+  will-change: height, top !important;
+}
+
+/* Top panel: solid at the top of the page, fading to clear at its bottom edge. */
+#rwm-focus-overlay .rwm-focus-panel-top {
+  top: 0 !important;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - var(--rwm-feather, 28px)), transparent 100%) !important;
+  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - var(--rwm-feather, 28px)), transparent 100%) !important;
+}
+
+/* Bottom panel: clear at its top edge, fading to solid dim below. */
+#rwm-focus-overlay .rwm-focus-panel-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--rwm-feather, 28px), #000 100%) !important;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--rwm-feather, 28px), #000 100%) !important;
+}
+
+/* --- FEATURE 4: Calm Mode (non-destructive decluttering) -------------------
+   Applied when .rwm-calm-active is added to <body> by content.js. Calm Mode
+   changes NOTHING about the page's layout, widths, margins, colors, fonts or
+   alignment. It only hides clutter with display: none. Remove the class and
+   everything returns instantly. Selectors are descendant-only
+   (body.rwm-calm-active X), so <body> and <html> themselves can never be
+   hidden, and the extension's own widgets (which live outside <body>) are
+   never affected.
+
+   SAFETY: Calm Mode never overrides display:flex, display:grid, or
+   display:inline-flex / inline-grid on structural containers. The selectors
+   below target only elements whose default or computed display is block-like
+   or list-item-like. Any element already used as a flex/grid container by the
+   site is left alone because site-specific rules almost always beat the
+   broad attribute selectors used here.
+
+   Two tiers:
+   1) CORE rules always apply while Calm Mode is on.
+   2) EXTENDED rules (sidebars, related-content, ad networks, overlays,
+      chat widgets, comments, plus elements content.js tagged with
+      data-rwm-calm-hidden because they are fixed/sticky floating bars) are
+      switched off by a safety net: if content.js sees that hiding them made
+      most of the page's text disappear, it adds .rwm-calm-safe to <body>
+      and only the CORE tier stays active. */
+
+/* ---- CORE ---- */
+
+/* Ad containers and side promotions */
+body.rwm-calm-active .ad,
+body.rwm-calm-active [class*="ad-" i],
+body.rwm-calm-active [class*="-ad" i],
+body.rwm-calm-active iframe[src*="doubleclick"],
+
+/* Sticky / floating headers and footers, cookie notices, banners */
+body.rwm-calm-active [class*="cookie" i],
+body.rwm-calm-active [class*="banner" i],
+body.rwm-calm-active [class*="sticky" i],
+
+/* Overlays and popups */
+body.rwm-calm-active [class*="modal" i],
+body.rwm-calm-active [class*="popup" i],
+body.rwm-calm-active [class*="newsletter" i],
+body.rwm-calm-active [class*="subscribe" i],
+
+/* Social share bars and floating widgets */
+body.rwm-calm-active [class*="share-bar" i],
+body.rwm-calm-active [class*="social" i] {
+  display: none !important;
+}
+
+/* ---- EXTENDED (disabled automatically by .rwm-calm-safe) ---- */
+
+/* Elements content.js detected as fixed/sticky floating bars or popups */
+body.rwm-calm-active:not(.rwm-calm-safe) [data-rwm-calm-hidden="true"],
+
+/* Sidebars and complementary content */
+body.rwm-calm-active:not(.rwm-calm-safe) aside,
+body.rwm-calm-active:not(.rwm-calm-safe) [role="complementary"],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="sidebar" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [id*="sidebar" i],
+
+/* Recommendations, promos, sponsored and advertising */
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="related" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="recommend" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="promo" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="sponsor" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="advert" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [id*="advert" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="taboola" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="outbrain" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [aria-label*="advertisement" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [data-ad],
+body.rwm-calm-active:not(.rwm-calm-safe) [data-ad-slot],
+body.rwm-calm-active:not(.rwm-calm-safe) [data-google-query-id],
+body.rwm-calm-active:not(.rwm-calm-safe) [id^="google_ads" i],
+body.rwm-calm-active:not(.rwm-calm-safe) ins.adsbygoogle,
+body.rwm-calm-active:not(.rwm-calm-safe) iframe[src*="googlesyndication"],
+body.rwm-calm-active:not(.rwm-calm-safe) iframe[src*="adservice"],
+body.rwm-calm-active:not(.rwm-calm-safe) iframe[src*="amazon-adsystem"],
+body.rwm-calm-active:not(.rwm-calm-safe) iframe[src*="taboola"],
+body.rwm-calm-active:not(.rwm-calm-safe) iframe[src*="outbrain"],
+body.rwm-calm-active:not(.rwm-calm-safe) iframe[src*="criteo"],
+body.rwm-calm-active:not(.rwm-calm-safe) iframe[src*="adnxs"],
+body.rwm-calm-active:not(.rwm-calm-safe) iframe[id*="google_ads" i],
+
+/* Overlays, consent dialogs, toasts, app-install bars, chat widgets */
+body.rwm-calm-active:not(.rwm-calm-safe) [aria-modal="true"],
+body.rwm-calm-active:not(.rwm-calm-safe) [role="alertdialog"],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="overlay" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="consent" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="gdpr" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="toast" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="floating" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="smartbanner" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="notification-bar" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="back-to-top" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="chat-widget" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="intercom" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [id*="intercom" i],
+
+/* Comment sections */
+body.rwm-calm-active:not(.rwm-calm-safe) [class*="comments" i],
+body.rwm-calm-active:not(.rwm-calm-safe) [id*="comments" i] {
+  display: none !important;
+}
+
+/* Many cookie walls and modals lock page scrolling (overflow: hidden).
+   When Calm Mode hides a full-screen overlay, content.js adds
+   .rwm-calm-unlock to <html> so the page can still scroll. */
+html.rwm-calm-unlock,
+html.rwm-calm-unlock body {
+  overflow: auto !important;
+}
+
+/* --- FEATURE 6: AI Copilot badge + drawer ---------------------------------- */
+
+#rwm-copilot-badge {
+  position: fixed !important;
+  bottom: 20px !important;
+  right: 20px !important;
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 50% !important;
+  background: var(--rwm-ui-accent) !important;
+  color: #FFFFFF !important;
+  border: 2px solid var(--rwm-ui-border) !important;
+  box-shadow: 0 4px 14px var(--rwm-ui-shadow) !important;
+  font-size: 24px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  z-index: 2147483646 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 0.15s ease !important;
+  padding: 0 !important;
+  font-family: inherit !important;
+}
+
+#rwm-copilot-badge:hover {
+  transform: scale(1.06) !important;
+}
+
+#rwm-copilot-drawer {
+  position: fixed !important;
+  bottom: 90px !important;
+  right: 20px !important;
+  width: 340px !important;
+  max-width: calc(100vw - 40px) !important;
+  height: 480px !important;
+  max-height: calc(100vh - 120px) !important;
+  background: var(--rwm-ui-surface) !important;
+  border: 1px solid var(--rwm-ui-border) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 30px var(--rwm-ui-shadow) !important;
+  z-index: 2147483646 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif !important;
+  transform: translateY(16px) scale(0.98) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: transform 0.18s ease, opacity 0.18s ease !important;
+}
+
+#rwm-copilot-drawer.rwm-open {
+  transform: translateY(0) scale(1) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+#rwm-copilot-drawer .rwm-copilot-header {
+  background: var(--rwm-ui-accent) !important;
+  color: #FFFFFF !important;
+  padding: 14px 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  flex-shrink: 0 !important;
+}
+
+#rwm-copilot-drawer .rwm-copilot-close {
+  background: transparent !important;
+  border: none !important;
+  color: #FFFFFF !important;
+  font-size: 20px !important;
+  cursor: pointer !important;
+  line-height: 1 !important;
+  padding: 2px 6px !important;
+}
+
+#rwm-copilot-drawer .rwm-copilot-presets {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  padding: 10px 12px !important;
+  border-bottom: 1px solid var(--rwm-ui-border) !important;
+  background: var(--rwm-ui-bg) !important;
+  flex-shrink: 0 !important;
+}
+
+#rwm-copilot-drawer .rwm-copilot-preset-btn {
+  border: 1px solid var(--rwm-ui-border) !important;
+  background: var(--rwm-ui-surface) !important;
+  color: var(--rwm-ui-text) !important;
+  border-radius: 999px !important;
+  padding: 6px 10px !important;
+  font-size: 11px !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  font-family: inherit !important;
+}
+
+#rwm-copilot-drawer .rwm-copilot-preset-btn:hover {
+  background: var(--rwm-ui-hover) !important;
+}
+
+#rwm-copilot-drawer .rwm-copilot-messages {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  background: var(--rwm-ui-surface) !important;
+}
+
+#rwm-copilot-drawer .rwm-copilot-msg {
+  max-width: 85% !important;
+  padding: 8px 12px !important;
+  border-radius: 12px !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+  white-space: pre-wrap !important;
+}
+
+#rwm-copilot-drawer .rwm-copilot-msg-user {
+  align-self: flex-end !important;
+  background: var(--rwm-ui-accent) !important;
+  color: #FFFFFF !important;
+  border-bottom-right-radius: 2px !important;
+}
+
+#rwm-copilot-drawer .rwm-copilot-msg-assistant {
+  align-self: flex-start !important;
+  background: var(--rwm-ui-bubble) !important;
+  color: var(--rwm-ui-text) !important;
+  border-bottom-left-radius: 2px !important;
+}
+
+#rwm-copilot-drawer .rwm-copilot-input-row {
+  display: flex !important;
+  gap: 6px !important;
+  padding: 10px !important;
+  border-top: 1px solid var(--rwm-ui-border) !important;
+  background: var(--rwm-ui-bg) !important;
+  flex-shrink: 0 !important;
+}
+
+#rwm-copilot-drawer .rwm-copilot-input {
+  flex: 1 !important;
+  border: 1px solid var(--rwm-ui-border) !important;
+  background: var(--rwm-ui-surface) !important;
+  color: var(--rwm-ui-text) !important;
+  border-radius: 999px !important;
+  padding: 8px 14px !important;
+  font-size: 13px !important;
+  font-family: inherit !important;
+  outline: none !important;
+  min-width: 0 !important;
+}
+
+#rwm-copilot-drawer .rwm-copilot-send-btn {
+  border: none !important;
+  background: var(--rwm-ui-accent) !important;
+  color: #FFFFFF !important;
+  border-radius: 50% !important;
+  width: 36px !important;
+  height: 36px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  flex-shrink: 0 !important;
+}
+
+/* --- FEATURE 5: Syllable Splitter & Jargon Simplifier tooltip ------------- */
+
+#rwm-tooltip {
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  background: var(--rwm-ui-tooltip-bg) !important;
+  color: #FFFFFF !important;
+  border: 1px solid var(--rwm-ui-tooltip-border) !important;
+  padding: 12px 14px !important;
+  border-radius: 10px !important;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+  max-width: 250px !important;
+  box-shadow: 0 6px 20px var(--rwm-ui-shadow) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif !important;
+  display: none !important;
+}
+
+#rwm-tooltip.rwm-visible {
+  display: block !important;
+}
+
+#rwm-tooltip .rwm-tooltip-word {
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  margin-bottom: 4px !important;
+  display: block !important;
+  padding-right: 14px !important;
+}
+
+#rwm-tooltip .rwm-tooltip-syllables {
+  color: #F5D77A !important;
+  display: block !important;
+  margin-bottom: 6px !important;
+  letter-spacing: 0.03em !important;
+}
+
+#rwm-tooltip .rwm-tooltip-definition {
+  display: block !important;
+  color: #E8E4DA !important;
+}
+
+#rwm-tooltip .rwm-tooltip-retry-btn {
+  background: #5B7F8C !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 3px 9px !important;
+  font-size: 10px !important;
+  cursor: pointer !important;
+  font-family: inherit !important;
+  margin-top: 6px !important;
+}
+
+#rwm-tooltip .rwm-tooltip-close {
+  position: absolute !important;
+  top: 6px !important;
+  right: 8px !important;
+  background: transparent !important;
+  border: none !important;
+  color: #C9C3B5 !important;
+  cursor: pointer !important;
+  font-size: 12px !important;
+  padding: 0 !important;
+}
+
+/* --- Readability guard for extension UI ------------------------------------
+   content.js forces dark text on page elements for contrast. The extension's
+   own UI is excluded there via the .rwm-ui class, but these rules also keep
+   its text colors safe from aggressive site stylesheets. */
+
+#rwm-copilot-drawer .rwm-copilot-header span {
+  color: #FFFFFF !important;
+}
+
+#rwm-tooltip span {
+  color: inherit !important;
+}
+
+#rwm-tooltip .rwm-tooltip-syllables {
+  color: #F5D77A !important;
+}
+
+#rwm-tooltip .rwm-tooltip-definition {
+  color: #E8E4DA !important;
+}
+
+/* --- FEATURE 7: Quick on-screen toggle toolbar -----------------------------
+   A small floating toolbar sitting immediately to the left of the copilot
+   badge (badge: 56px wide, 20px from the right edge -> toolbar starts at
+   86px, leaving a 10px gap). Each button is a toggle: .rwm-on marks the
+   active state, shown with a filled color AND a check mark so the state is
+   never conveyed by color alone. Buttons: Focus Window, Calm Mode,
+   Dark Mode, and Read Aloud. */
+
+#rwm-quick-toolbar {
+  position: fixed !important;
+  bottom: 20px !important;
+  right: 86px !important;
+  height: 56px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  z-index: 2147483646 !important;
+  background: transparent !important;
+}
+
+#rwm-quick-toolbar .rwm-quick-btn {
+  position: relative !important;
+  width: 44px !important;
+  height: 44px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  border: 2px solid var(--rwm-ui-border) !important;
+  background: var(--rwm-ui-surface) !important;
+  color: var(--rwm-ui-text) !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 3px 10px var(--rwm-ui-shadow) !important;
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease !important;
+  font-family: inherit !important;
+}
+
+#rwm-quick-toolbar .rwm-quick-btn:hover {
+  transform: scale(1.08) !important;
+}
+
+#rwm-quick-toolbar .rwm-quick-btn:focus-visible {
+  outline: 2px solid #B98900 !important;
+  outline-offset: 2px !important;
+}
+
+#rwm-quick-toolbar .rwm-quick-btn.rwm-on {
+  background: var(--rwm-ui-accent) !important;
+  border-color: var(--rwm-ui-accent-dark) !important;
+}
+
+#rwm-quick-toolbar .rwm-quick-btn.rwm-on::after {
+  content: "\2713" !important;
+  position: absolute !important;
+  top: -5px !important;
+  right: -5px !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50% !important;
+  background: #1E7B4F !important;
+  color: #FFFFFF !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 18px !important;
+  text-align: center !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif !important;
+}
+
+/* --- FEATURE 9: Read-Aloud highlight --------------------------------------- */
+
+.rwm-read-aloud-highlight {
+  background-color: #FFF3C4 !important;
+  border-radius: 3px !important;
+  box-shadow: 0 0 0 2px rgba(255, 243, 196, 0.5) !important;
+  transition: background-color 0.15s ease !important;
+}
+
+html[data-rwm-theme="dark"] .rwm-read-aloud-highlight {
+  background-color: #2E4057 !important;
+  box-shadow: 0 0 0 2px rgba(46, 64, 87, 0.5) !important;
+}
+
+/* --- MOBILE: Responsive ergonomics (≤600px) --------------------------------
+   Scales down the Quick Toolbar buttons and Copilot badge so they sit
+   comfortably in the thumb zone of a mobile screen without covering article
+   text. The Copilot drawer also goes full-width on narrow viewports. */
+
+@media (max-width: 600px) {
+
+  /* Copilot badge: slightly smaller, tighter corner placement */
+  #rwm-copilot-badge {
+    width: 44px !important;
+    height: 44px !important;
+    bottom: 14px !important;
+    right: 12px !important;
+    font-size: 20px !important;
+  }
+
+  /* Quick toolbar: repositioned to sit left of the smaller badge */
+  #rwm-quick-toolbar {
+    bottom: 14px !important;
+    right: 64px !important;      /* 44px badge + 12px right + 8px gap */
+    height: 44px !important;
+    gap: 6px !important;
+  }
+
+  /* Toolbar toggle buttons: smaller, lighter shadows */
+  #rwm-quick-toolbar .rwm-quick-btn {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 16px !important;
+    box-shadow: 0 2px 6px var(--rwm-ui-shadow) !important;
+  }
+
+  /* Active-state check badge scales proportionally */
+  #rwm-quick-toolbar .rwm-quick-btn.rwm-on::after {
+    width: 15px !important;
+    height: 15px !important;
+    font-size: 9px !important;
+    line-height: 15px !important;
+    top: -4px !important;
+    right: -4px !important;
+  }
+
+  /* Copilot drawer: full viewport width on narrow screens */
+  #rwm-copilot-drawer {
+    right: 0 !important;
+    bottom: 68px !important;     /* clear the smaller badge row */
+    width: 100vw !important;
+    max-width: 100vw !important;
+    border-radius: 16px 16px 0 0 !important;
+    max-height: calc(100vh - 80px) !important;
+  }
+}

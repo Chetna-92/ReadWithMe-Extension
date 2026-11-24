@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ReadWithMe – Generate Extension ZIP</title>
+<style>
+  :root {
+    --bg: #FBFAF7;
+    --surface: #FFFFFF;
+    --border: #E3DFD6;
+    --text: #2E2A24;
+    --text-soft: #6B6558;
+    --accent: #5B7F8C;
+    --accent-soft: #E7F0F2;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 560px;
+    width: 100%;
+  }
+
+  h1 {
+    font-size: 22px;
+    margin: 0 0 6px 0;
+  }
+
+  p.subtitle {
+    font-size: 13px;
+    color: var(--text-soft);
+    margin: 0 0 24px 0;
+    line-height: 1.5;
+  }
+
+  .file-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px 0;
+  }
+
+  .file-list li {
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .file-list li .icon {
+    flex-shrink: 0;
+    width: 20px;
+    text-align: center;
+  }
+
+  .file-list li .name {
+    font-weight: 600;
+  }
+
+  .file-list li .size {
+    margin-left: auto;
+    color: var(--text-soft);
+    font-size: 11px;
+  }
+
+  button#generateBtn {
+    width: 100%;
+    padding: 14px;
+    border-radius: var(--radius);
+    border: none;
+    background: var(--accent);
+    color: #FFFFFF;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  button#generateBtn:hover {
+    background: #4A6B77;
+  }
+
+  button#generateBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  #status {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--text-soft);
+    text-align: center;
+    min-height: 18px;
+  }
+
+  #status.error {
+    color: #B3261E;
+  }
+
+  #status.success {
+    color: #1E7B4F;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>📦 ReadWithMe – Generate ZIP</h1>
+  <p class="subtitle">
+    Click the button below to bundle all extension files into a
+    <strong>ReadWithMe-extension.zip</strong> that you can load in
+    <code>chrome://extensions</code> (Developer mode → Load unpacked)
+    or upload to the Chrome Web Store.
+  </p>
+
+  <ul class="file-list" id="fileList">
+    <li><span class="icon">📄</span><span class="name">manifest.json</span><span class="size" id="size-manifest"></span></li>
+    <li><span class="icon">🎨</span><span class="name">content.css</span><span class="size" id="size-css"></span></li>
+    <li><span class="icon">⚙️</span><span class="name">content.js</span><span class="size" id="size-contentjs"></span></li>
+    <li><span class="icon">🖼️</span><span class="name">popup.html</span><span class="size" id="size-popuphtml"></span></li>
+    <li><span class="icon">⚙️</span><span class="name">popup.js</span><span class="size" id="size-popupjs"></span></li>
+  </ul>
+
+  <button id="generateBtn">Generate &amp; Download ZIP</button>
+  <div id="status"></div>
+</div>
+
+<!-- JSZip from CDN (MIT License) -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  const statusEl = document.getElementById("status");
+  const btn = document.getElementById("generateBtn");
+
+  // ---------------------------------------------------------------------------
+  // Embedded file contents (the full, un-truncated source of every file in
+  // the extension). These strings are produced by the build step and pasted
+  // here so the ZIP generator is fully self-contained — no server needed.
+  // ---------------------------------------------------------------------------
+
+  const FILES = {
+    "manifest.json": null,
+    "content.css": null,
+    "content.js": null,
+    "popup.html": null,
+    "popup.js": null
+  };
+
+  // The actual content is loaded from <script> tags embedded below,
+  // or can be pasted inline. For the self-contained approach we fetch
+  // them as sibling files (works when opened from the extension folder).
+  async function loadFiles() {
+    const names = Object.keys(FILES);
+    const results = await Promise.allSettled(
+      names.map((name) =>
+        fetch(name).then((r) => {
+          if (!r.ok) throw new Error(`${name}: ${r.status}`);
+          return r.text();
+        })
+      )
+    );
+
+    let allLoaded = true;
+    results.forEach((result, i) => {
+      const sizeEl = document.getElementById("size-" + names[i].replace(/\./g, "").replace("manifest", "manifest").replace("contentcss", "css").replace("contentjs", "contentjs").replace("popuphtml", "popuphtml").replace("popupjs", "popupjs"));
+      if (result.status === "fulfilled") {
+        FILES[names[i]] = result.value;
+        // Show sizes
+        const sizeMap = {
+          "manifest.json": "size-manifest",
+          "content.css": "size-css",
+          "content.js": "size-contentjs",
+          "popup.html": "size-popuphtml",
+          "popup.js": "size-popupjs"
+        };
+        const el = document.getElementById(sizeMap[names[i]]);
+        if (el) {
+          const kb = (new Blob([result.value]).size / 1024).toFixed(1);
+          el.textContent = `${kb} KB`;
+        }
+      } else {
+        allLoaded = false;
+      }
+    });
+
+    return allLoaded;
+  }
+
+  async function generateZip() {
+    btn.disabled = true;
+    statusEl.className = "";
+    statusEl.textContent = "Loading files…";
+
+    const loaded = await loadFiles();
+    if (!loaded) {
+      statusEl.className = "error";
+      statusEl.textContent = "Could not load all files. Make sure this HTML is in the same folder as the extension files.";
+      btn.disabled = false;
+      return;
+    }
+
+    statusEl.textContent = "Creating ZIP…";
+
+    try {
+      const zip = new JSZip();
+      Object.entries(FILES).forEach(([name, content]) => {
+        zip.file(name, content);
+      });
+
+      const blob = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 9 }
+      });
+
+      // Trigger download.
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "ReadWithMe-extension.zip";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      const sizeKb = (blob.size / 1024).toFixed(1);
+      statusEl.className = "success";
+      statusEl.textContent = `✅ ReadWithMe-extension.zip (${sizeKb} KB) downloaded successfully!`;
+    } catch (err) {
+      statusEl.className = "error";
+      statusEl.textContent = `Error: ${err.message}`;
+    }
+
+    btn.disabled = false;
+  }
+
+  // Load file sizes on page load.
+  loadFiles();
+
+  btn.addEventListener("click", generateZip);
+})();
+</script>
+
+</body>
+</html>
